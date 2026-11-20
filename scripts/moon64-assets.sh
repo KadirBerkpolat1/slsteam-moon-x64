@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# moon64-assets.sh <SLSsteam.so> <outdir> — emit the release assets the moon64
+# moon64-assets.sh <SLSsteam.so> <outdir> [release tag] — emit the release assets the moon64
 # switcher gates a prebuilt on, next to a copy of the library:
 #
 #   <outdir>/SLSsteam.so          the library, verbatim
@@ -7,6 +7,9 @@
 #   <outdir>/pattern-status.txt   res/pattern-status.counts plus one
 #                                 binary_sha256= line naming this exact library
 #                                 and one source_commit= line naming the commit
+#                                 and one release_tag= line naming the release
+#                                 this library ships in (moon64's About stamp
+#                                 for the fork's tab reads it)
 #
 # moon64/install.sh downloads SLSsteam.so and pattern-status.txt, then refuses
 # the pair unless the status file names the downloaded library by sha256 and
@@ -25,7 +28,7 @@ COUNTS="$REPO_ROOT/res/pattern-status.counts"
 
 die() { echo "moon64-assets: $*" >&2; exit 1; }
 
-[ $# -eq 2 ] || die "usage: $0 <SLSsteam.so> <outdir>"
+[ $# -ge 2 ] && [ $# -le 3 ] || die "usage: $0 <SLSsteam.so> <outdir> [release tag]"
 so="$1" outdir="$2"
 
 [ -f "$so" ] || die "no such library: $so"
@@ -73,6 +76,8 @@ is_uint() { [ -n "$1" ] && [ -z "${1//[0-9]/}" ]; }
 
 sha="$(sha256sum "$so" | cut -d' ' -f1)"
 commit="$(git -C "$REPO_ROOT" rev-parse HEAD 2>/dev/null || echo unknown)"
+tag="${3:-$(git -C "$REPO_ROOT" describe --tags --exact-match HEAD 2>/dev/null || true)}"
+[ -n "$tag" ] || die "release tag unknown: pass it as the third argument (the release this library ships in)"
 
 mkdir -p "$outdir"
 install -m 644 "$so" "$outdir/SLSsteam.so"
@@ -82,8 +87,9 @@ printf '%s  %s\n' "$sha" SLSsteam.so > "$outdir/SLSsteam.so.sha256"
 	echo "# Counts come from the committed res/pattern-status.counts (offline audit)."
 	grep -vE '^\s*(#|$)' "$COUNTS"
 	printf 'binary_sha256=%s\n' "$sha"
-	printf 'source_commit=%s\n' "$commit"
+printf 'source_commit=%s\n' "$commit"
+printf 'release_tag=%s\n' "$tag"
 } > "$outdir/pattern-status.txt"
 
 echo "moon64-assets: $outdir/{SLSsteam.so,SLSsteam.so.sha256,pattern-status.txt}"
-echo "moon64-assets: binary_sha256=$sha source_commit=$commit"
+echo "moon64-assets: binary_sha256=$sha source_commit=$commit release_tag=$tag"

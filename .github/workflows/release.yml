@@ -94,7 +94,7 @@ jobs:
       # Bare library + the status file the moon64 switcher gates a prebuilt on.
       # Fails the build if the committed pattern table regressed.
       - name: moon64 prebuilt assets
-        run: scripts/moon64-assets.sh bin/SLSsteam.so release/
+        run: scripts/moon64-assets.sh bin/SLSsteam.so release/ "v${{ steps.ver.outputs.version }}"
 
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
