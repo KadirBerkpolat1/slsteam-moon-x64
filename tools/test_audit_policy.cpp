@@ -77,6 +77,14 @@ int main()
 	check(!AuditBinding::narrowValueEnabled("0"),
 	      "audit narrowing rejects disabled values");
 
+	using AuditBinding::interfaceVersion;
+	check(interfaceVersion(0) == 0, "la_version keeps a zero offer, which leaves the module inactive");
+	check(interfaceVersion(1) == 1, "a linker offering audit version 1 (glibc 2.34) gets version 1");
+	check(interfaceVersion(LAV_CURRENT) == LAV_CURRENT,
+	      "a linker offering the header's version gets that version");
+	check(interfaceVersion(LAV_CURRENT + 5) == LAV_CURRENT,
+	      "a newer linker gets the header's version, never one this build does not know");
+
 	std::ifstream mainSource("src/main.cpp");
 	const std::string mainText(
 		(std::istreambuf_iterator<char>(mainSource)),
@@ -101,6 +109,9 @@ int main()
 	check(policyReady != std::string::npos && setupLock != std::string::npos
 	          && policyReady < setupLock,
 	      "narrow audit policy is published before a secondary namespace can skip setup");
+
+	check(mainText.find("return AuditBinding::interfaceVersion(version);") != std::string::npos,
+	      "SLSsteam.so answers la_version with the negotiated version");
 
 	// The audit module can run on Steam-owned threads whose locale TLS does
 	// not contain the audit namespace's glibc ctype table. Keep byte parsing

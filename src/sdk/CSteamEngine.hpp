@@ -57,6 +57,11 @@ static_assert(offsetof(CServerPipe, pipeHandle) == 0x8);
 static_assert(offsetof(CServerPipe, pid) == 0x14);
 #endif
 
+// GetServerPipe is located by signature and the x86_64 offsets above come from another client
+// build, so pipeHandle and pid are read only from a pipe this accepts: the whole object lies in
+// readable memory of this process and its pid is one Linux can hand out.
+bool plausibleServerPipe(const CServerPipe* pipe);
+
 class CSteamEngine
 {
 public:

@@ -493,7 +493,7 @@ static uint32_t hkSteamEngine_ProcessIPCFrame(
 	if (cmd == EIPCCmd::ConnectPipe)
 	{
 		const auto serverPipe = g_pSteamEngine->getServerPipe(hPipe);
-		if (serverPipe)
+		if (plausibleServerPipe(serverPipe))
 		{
 			Process_t process{};
 			if (process.init(serverPipe->pid, serverPipe->pipeHandle))
@@ -509,6 +509,11 @@ static uint32_t hkSteamEngine_ProcessIPCFrame(
 		}
 		else
 		{
+			if (serverPipe)
+			{
+				g_pLog->warn("ConnectPipe %u: CServerPipe at %p is unreadable or has no valid pid; its process is not tracked\n",
+					hPipe, static_cast<void*>(serverPipe));
+			}
 			g_processMap.erase(hPipe);
 		}
 	}

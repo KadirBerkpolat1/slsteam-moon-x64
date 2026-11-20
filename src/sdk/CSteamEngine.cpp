@@ -3,7 +3,9 @@
 #include "IClientCompat.hpp"
 #include "CUtl.hpp"
 
+#include "../addr_plausible.hpp"
 #include "../hooks.hpp"
+#include "../memhlp.hpp"
 #include "../patterns.hpp"
 #include "../vftableinfo.hpp"
 #include "../feats/compatlive.hpp"
@@ -11,6 +13,8 @@
 #include "libmem/libmem.h"
 
 #include <array>
+#include <cstddef>
+#include <cstdint>
 
 namespace
 {
@@ -22,6 +26,14 @@ bool executableAddress(lm_address_t address)
 		(segment.prot & LM_PROT_XR) == LM_PROT_XR &&
 		address >= segment.base && address < segment.end;
 }
+
+bool readableRange(lm_address_t address, std::size_t size)
+{
+	lm_segment_t segment{};
+	return LM_FindSegment(address, &segment) &&
+		(segment.prot & LM_PROT_R) != 0 &&
+		MemHlp::rangeContains(segment.base, segment.end, address, size);
+}
 }
 
 CServerPipe* CSteamEngine::getServerPipe(const HSteamPipe pipe)
@@ -29,6 +41,15 @@ CServerPipe* CSteamEngine::getServerPipe(const HSteamPipe pipe)
 	const static auto fn = reinterpret_cast<CServerPipe*(*)(void*, HSteamPipe)>(
 		Patterns::CSteamEngine::GetServerPipe.address);
 	return fn(this, pipe);
+}
+
+bool plausibleServerPipe(const CServerPipe* const pipe)
+{
+	// Linux pids stay below PID_MAX_LIMIT, 1 << 22 on a 64-bit kernel.
+	constexpr std::int32_t kPidLimit = 1 << 22;
+	return Addr::plausibleUserPointer(pipe) &&
+		readableRange(reinterpret_cast<lm_address_t>(pipe), sizeof(*pipe)) &&
+		pipe->pid > 0 && pipe->pid < kPidLimit;
 }
 
 CUser* CSteamEngine::getUser(uint32_t index)

@@ -64,4 +64,15 @@ namespace AuditBinding
 			flags |= LA_FLG_BINDTO;
 		return flags;
 	}
+
+	// What la_version answers. `offered` is the newest audit interface the dynamic linker
+	// supports, and the linker refuses a module that answers with a newer one (glibc: lav <=
+	// LAV_CURRENT). The release is built against glibc 2.35 headers (LAV_CURRENT 2) and must
+	// still load under the glibc 2.34 floor, whose linker offers 1: the x86 callbacks are the
+	// same in both versions, version 1 only skips la_symbind for bind-now symbols. Zero stays
+	// zero, which leaves the module inactive.
+	constexpr unsigned int interfaceVersion(unsigned int offered) noexcept
+	{
+		return offered < LAV_CURRENT ? offered : LAV_CURRENT;
+	}
 }
